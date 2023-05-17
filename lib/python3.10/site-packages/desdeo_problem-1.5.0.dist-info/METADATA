@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: desdeo-problem
+Version: 1.5.0
+Summary: This package contains the problem classes for desdeo framework.
+License: MIT
+Author: Bhupinder Saini
+Author-email: bhupinder.s.saini@jyu.fi
+Requires-Python: >=3.9,<3.11
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Requires-Dist: Shapely (>=1.8.0,<2.0.0)
+Requires-Dist: descartes (>=1.1.0,<2.0.0)
+Requires-Dist: desdeo-tools (>=1.8.0,<2.0.0)
+Requires-Dist: diversipy (>=0.8.0,<0.9.0)
+Requires-Dist: optproblems (>=1.2,<2.0)
+Requires-Dist: scikit-learn (>=1.1,<2.0)
