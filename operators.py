@@ -7,7 +7,7 @@ class Mutation:
         self.mut_rate = mut_rate
 
     def do(self, offspring: np.ndarray):
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         var_count = len(offspring[0])
         print("MUTATION")
         
@@ -24,7 +24,7 @@ class Crossover:
             shuffle(shuffled_ids)
         else:
             shuffled_ids = mating_pop_ids
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         return pop[shuffled_ids]
 
 

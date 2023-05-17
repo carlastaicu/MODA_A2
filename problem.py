@@ -26,9 +26,9 @@ class BicycleProblem:
         matrix_str = metric + "_matrix"
         matrix = getattr(self, matrix_str)
         total = 0
-        total += matrix[0][path[0]]
-        for i in range(path.shape[-1]-1):
-            total += matrix[i][i+1]
+        total += matrix[0][path[:, 0]]
+        for i in range(path.shape[1]-1):
+            total += matrix[path[:, i],path[:, i+1]]
         return total
     
     # Minimize
@@ -127,7 +127,7 @@ class BicycleProblem:
 
         xover = Crossover()
         mutation = Mutation()
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         population = SurrogatePopulation(problem, 100, initial_pop, xover, mutation, recombination=None)
         population_pfront = SurrogatePopulation(problem, 100, initial_pop, xover, mutation, recombination=None)
 
