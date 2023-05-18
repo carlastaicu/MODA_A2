@@ -6,6 +6,17 @@ import warnings
 warnings.filterwarnings("ignore")
 from desdeo_emo.population.SurrogatePopulation import SurrogatePopulation
 
+def check_if_permutation(path):
+    var_count = len(path)
+    if np.sum(path > var_count) != 0:
+        return False
+    if np.sum(path < 1) != 0:
+        return False
+    _, counts = np.unique(path, return_counts=True)
+    if np.sum(counts > 1) != 0:
+        return False
+    return True
+
 # Which objectives do we wish to optimize
 # scenic beauty, roughness, safety, slope
 # we want to minimize total distance and maximize comfort 
@@ -73,6 +84,10 @@ var, obj, _ = evolver.end()
 
 print("var: ", var)
 print("obj: ", obj)
+print("min dist: ", min(obj[:,0]))
+for path in var:
+    if not check_if_permutation(path):
+        print("invalid")
 
 # save the solution if you wish, make sure to change the name to not accidentally overwrite an existing solution.
 # Saved solutions can be used later to visualize it
