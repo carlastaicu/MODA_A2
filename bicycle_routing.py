@@ -29,29 +29,28 @@ def symmetric_matrix(matrix, integers = False):
 
 def check_constraints(bicycle_problem, path):
     metrics = ["beauty", "roughness", "safety", "slope"]
-    all_good = True
+    all_good = np.array([True]*len(path))
     for i, m in enumerate(metrics):
         value = bicycle_problem.total_metric(path, m)
-        if constraints[i][0] is not None and np.sum(value < constraints[i][0]) != 0:
-            print(f"Lower bound for metric {m} violated")
-            all_good = False
-        if constraints[i][1] is not None and np.sum(value > constraints[i][1]) != 0:
-            print(f"Upper bound for metric {m} violated")
-            all_good = True
+        if constraints[i][0] is not None:
+            all_good = all_good & (value < constraints[i][0])
+        if constraints[i][1] is not None:
+            all_good = all_good & (value > constraints[i][1])
     return all_good
 
 # Which objectives do we wish to optimize
 # scenic beauty, roughness, safety, slope
 # we want to minimize total distance and maximize comfort 
 # (comfort is given by beauty, roughness, safety, slope)
-obj_weights = np.array([1, 1, 0, 0, 0])
-variable_count = 15 # Around 15 - 25 seems to be good enough
+obj_weights = np.array([1, 1, 1, 1, 1])
+variable_count = 4 # Around 15 - 25 seems to be good enough
 
 # Set constraint for objectives, [lower, upper]
 # If no constraint then set it to None
 # Each row represents a objective function in the same order as in obj_gd 
 # Notice that breaking constraints will result in a penalty and therefore we might get results that break the constraints
 constraints = np.array([
+    [None, None],
     [3*variable_count, None], # Scenic beauty > 3 
     [3*variable_count, None], # roughness > 3
     [None, 2*variable_count], # Safety < 2
@@ -75,7 +74,7 @@ safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1,
 slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
 
 bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix)
-population, method = bicycle_problem.create_problem(obj_weights, constraints, pfront = True)
+population, method = bicycle_problem.create_problem(obj_weights, pfront = True)
 
 # Two methods to solve the problem are shown below. Do not use them both at the same time!
 # Use one, and comment out the other!
@@ -111,8 +110,7 @@ print("min dist: ", min(obj[:,0]))
 for path in var:
     if not check_if_permutation(path):
         print("solution is not a permutation")
-if not check_constraints(bicycle_problem, var):
-    print("Some solution not fulfilling constraints")
+check_constraints(bicycle_problem, var)
 
 # Generate plots
 # Scatterplot F1, F2
