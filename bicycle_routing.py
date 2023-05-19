@@ -16,8 +16,10 @@ def check_if_permutation(path):
         return False
     return True
 
-def symmetric_matrix(matrix):
+def symmetric_matrix(matrix, integers = False):
     matrix = (matrix + matrix.T) / 2
+    if integers:
+        matrix = int(matrix)
     for i in range(len(matrix)):
         matrix[i][i] = 0
     return matrix
@@ -64,10 +66,10 @@ pop_size = 100
 # The method returns a MOProblem and a scalarmethod instance which can be passed to different Desdeo objects
 distance_matrix = symmetric_matrix(np.random.uniform(0, 50, size=(variable_count+1, variable_count+1)))
 
-beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
-roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
-safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
-slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
+beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1), integers=True))
+roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1), integers=True))
+safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1), integers=True))
+slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1), integers=True))
 
 bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix)
 population, method = bicycle_problem.create_problem(obj_weights, constraints, pfront = True)
