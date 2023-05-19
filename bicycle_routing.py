@@ -2,6 +2,8 @@ from desdeo_mcdm.utilities.solvers import solve_pareto_front_representation
 from desdeo_emo.EAs import NSGAIII
 import numpy as np
 import warnings
+import matplotlib.pyplot as plt
+
 warnings.filterwarnings("ignore")
 from problem import BicycleProblem
 
@@ -41,7 +43,7 @@ def check_constraints(bicycle_problem, path):
 # scenic beauty, roughness, safety, slope
 # we want to minimize total distance and maximize comfort 
 # (comfort is given by beauty, roughness, safety, slope)
-obj_weights = np.array([1, 1, 1, 1, 1])
+obj_weights = np.array([1, 1, 0, 0, 0])
 variable_count = 15 # Around 15 - 25 seems to be good enough
 
 # Set constraint for objectives, [lower, upper]
@@ -93,7 +95,7 @@ population, method = bicycle_problem.create_problem(obj_weights, constraints, pf
 # Example on solving the pareto front using NSGA-III
 evolver = NSGAIII(problem=None,
                   initial_population=population,
-                  n_iterations=10,
+                  n_iterations=50,
                   n_gen_per_iter=100,
                   population_size=100)
 
@@ -111,7 +113,44 @@ for path in var:
 if not check_constraints(bicycle_problem, var):
     print("Some solution not fulfilling constraints")
 
-# save the solution if you wish, make sure to change the name to not accidentally overwrite an existing solution.
-# Saved solutions can be used later to visualize it
-# The solution will be saved to modules/DataAndVisualization/'name'
-# save("gdExample", obj, var, problem.nadir, problem.ideal)
+# Generate plots
+# Scatterplot F1, F2
+NUM_RANDOM_SAMPLES = 1000
+bicycle_problem = BicycleProblem(variable_count, NUM_RANDOM_SAMPLES, distance_matrix, beauty_matrix, roughness_matrix,safety_matrix, slope_matrix)
+random_samples = np.array([np.random.permutation(range(1, variable_count+1)) for _ in range(NUM_RANDOM_SAMPLES)])
+random_distances = bicycle_problem.total_distance(random_samples)
+random_beauty = bicycle_problem.total_beauty(random_samples)
+random_roughness = bicycle_problem.total_roughness(random_samples)
+random_safety = bicycle_problem.total_safety(random_samples)
+random_slope = bicycle_problem.total_slope(random_samples)
+
+
+plt.figure(figsize=(6, 6))
+list_obj = ["beauty", "roughness", "safety", "slope"]
+for i, obj_name in enumerate(list_obj, start=1):
+    plt.subplot(2, 2, i)
+    plt.scatter(random_distances, locals()["random_"+obj_name])
+    plt.scatter(obj[:, 0], obj[:, i])
+    plt.xlabel("Total distance")
+    plt.ylabel(f"Total {obj_name}")
+plt.savefig("plots/pfront_plot.png", dpi=800)
+
+# import plotly.express as px
+def normalize(x):
+    return (x - np.min(x)) / (np.max(x) - np.min(x))
+
+import pandas as pd
+data_pareto = pd.DataFrame(obj, columns=["distance"]+list_obj)
+data_pareto["label"] = "Pareto"
+data_random = pd.DataFrame(np.column_stack([random_distances[:100], random_beauty[:100], random_roughness[:100],
+                                            random_safety[:100], random_slope[:100]]), columns=["distance"] + list_obj)
+data_random["label"] = "Random"
+data = pd.concat([data_random, data_pareto])
+data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
+dft = data.transpose()
+
+
+plt.figure()
+pd.plotting.parallel_coordinates(data, 'label', color=["tomato", "lime"])
+plt.savefig("plots/parallel.png", dpi=800)
+plt.show()
