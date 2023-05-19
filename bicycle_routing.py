@@ -3,6 +3,7 @@ from desdeo_emo.EAs import NSGAIII
 import numpy as np
 import warnings
 import matplotlib.pyplot as plt
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 from problem import BicycleProblem
@@ -115,7 +116,7 @@ if not check_constraints(bicycle_problem, var):
 
 # Generate plots
 # Scatterplot F1, F2
-NUM_RANDOM_SAMPLES = 1000
+NUM_RANDOM_SAMPLES = 100
 bicycle_problem = BicycleProblem(variable_count, NUM_RANDOM_SAMPLES, distance_matrix, beauty_matrix, roughness_matrix,safety_matrix, slope_matrix)
 random_samples = np.array([np.random.permutation(range(1, variable_count+1)) for _ in range(NUM_RANDOM_SAMPLES)])
 random_distances = bicycle_problem.total_distance(random_samples)
@@ -139,18 +140,21 @@ plt.savefig("plots/pfront_plot.png", dpi=800)
 def normalize(x):
     return (x - np.min(x)) / (np.max(x) - np.min(x))
 
-import pandas as pd
 data_pareto = pd.DataFrame(obj, columns=["distance"]+list_obj)
-data_pareto["label"] = "Pareto"
-data_random = pd.DataFrame(np.column_stack([random_distances[:100], random_beauty[:100], random_roughness[:100],
-                                            random_safety[:100], random_slope[:100]]), columns=["distance"] + list_obj)
+data_pareto_follow_constraints = data_pareto[data_pareto.apply(lambda x: check_constraints(bicycle_problem, [x[1:]]), axis=1)]
+data_pareto_follow_constraints["label"] = "Pareto follow constraints"
+data_pareto_not_follow_constraints = data_pareto[data_pareto.apply(lambda x: not check_constraints(bicycle_problem, [x[1:]]), axis=1)]
+data_pareto_not_follow_constraints["label"] = "Pareto not follow constraints"
+data_random = pd.DataFrame(np.column_stack([random_distances, random_beauty, random_roughness,
+                                                               random_safety, random_slope]),
+                                              columns=["distance"] + list_obj)
 data_random["label"] = "Random"
-data = pd.concat([data_random, data_pareto])
+data = pd.concat([data_random, data_pareto_not_follow_constraints, data_pareto_follow_constraints])
 data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
-dft = data.transpose()
-
+columns_to_check = [i for i, obj_weight in enumerate(obj_weights) if obj_weight != 0]
+interested_data = data.iloc[:, columns_to_check + [-1]]
 
 plt.figure()
-pd.plotting.parallel_coordinates(data, 'label', color=["tomato", "lime"])
+pd.plotting.parallel_coordinates(data, 'label', color=["tomato", "green", "lime"])
 plt.savefig("plots/parallel.png", dpi=800)
 plt.show()
