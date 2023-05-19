@@ -1,10 +1,9 @@
 from desdeo_mcdm.utilities.solvers import solve_pareto_front_representation
 from desdeo_emo.EAs import NSGAIII
-from problem import BicycleProblem
 import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
-from desdeo_emo.population.SurrogatePopulation import SurrogatePopulation
+from problem import BicycleProblem
 
 def check_if_permutation(path):
     var_count = len(path)
@@ -16,6 +15,25 @@ def check_if_permutation(path):
     if np.sum(counts > 1) != 0:
         return False
     return True
+
+def symmetric_matrix(matrix):
+    matrix = (matrix + matrix.T) / 2
+    for i in range(len(matrix)):
+        matrix[i][i] = 0
+    return matrix
+
+def check_constraints(bicycle_problem, path):
+    metrics = ["beauty", "roughness", "safety", "slope"]
+    all_good = True
+    for i, m in enumerate(metrics):
+        value = bicycle_problem.total_metric(path, m)
+        if constraints[i][0] is not None and np.sum(value < constraints[i][0]) != 0:
+            print(f"Lower bound for metric {m} violated")
+            all_good = False
+        if constraints[i][1] is not None and np.sum(value > constraints[i][1]) != 0:
+            print(f"Upper bound for metric {m} violated")
+            all_good = True
+    return all_good
 
 # Which objectives do we wish to optimize
 # scenic beauty, roughness, safety, slope
@@ -44,12 +62,12 @@ pop_size = 100
 # the pfront argument should be set to True if using the solve_pareto_front_representation method as it doesn't 
 # take account minimizing/maximizing. For everything else we can set it to False
 # The method returns a MOProblem and a scalarmethod instance which can be passed to different Desdeo objects
-distance_matrix = np.random.uniform(0, 50, size=(variable_count+1, variable_count+1))
+distance_matrix = symmetric_matrix(np.random.uniform(0, 50, size=(variable_count+1, variable_count+1)))
 
-beauty_matrix = np.random.randint(1, 5, size=(variable_count+1, variable_count+1))
-roughness_matrix = np.random.randint(1, 5, size=(variable_count+1, variable_count+1))
-safety_matrix = np.random.randint(1, 5, size=(variable_count+1, variable_count+1+1))
-slope_matrix = np.random.randint(1, 5, size=(variable_count+1, variable_count+1))
+beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
+roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
+safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
+slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)))
 
 bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix)
 population, method = bicycle_problem.create_problem(obj_weights, constraints, pfront = True)
@@ -87,7 +105,9 @@ print("obj: ", obj)
 print("min dist: ", min(obj[:,0]))
 for path in var:
     if not check_if_permutation(path):
-        print("invalid")
+        print("solution is not a permutation")
+if not check_constraints(bicycle_problem, var):
+    print("Some solution not fulfilling constraints")
 
 # save the solution if you wish, make sure to change the name to not accidentally overwrite an existing solution.
 # Saved solutions can be used later to visualize it
