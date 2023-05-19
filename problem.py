@@ -53,15 +53,15 @@ class BicycleProblem:
 
     def create_problem(self, obj_weights = np.ones(5), constraints = None, pfront = False):
         if constraints is not None:
-            if constraints.shape[0] != 4 or constraints.shape[1] != 2:
+            if constraints.shape[0] != 5 or constraints.shape[1] != 2:
                 raise("invalid constraints")
             elif pfront: # Flip the values if pfront
-                for i in range(1,4):
+                for i in range(0,5):
                     np.flip(constraints[i])
                     if constraints[i][0] is not None: constraints[i][0] = -constraints[i][0]
                     if constraints[i][1] is not None: constraints[i][1] = -constraints[i][1]
         else:
-            constraints = np.array([None] * 8).reshape((4,2))
+            constraints = np.array([None] * 10).reshape((5,2))
         
         if type(obj_weights) is not np.ndarray:
             obj_weights = np.array(obj_weights)
@@ -110,7 +110,7 @@ class BicycleProblem:
 
         obj_f = [self.total_distance, self.total_beauty, self.total_roughness, self.total_safety, self.total_slope]
         cons = []
-        for i in range(4):
+        for i in range(5):
             lower, upper = constraints[i]
             if lower is not None:
                 con = utils.constraint_builder(lambda path: obj_f[i](path), objectives_count, self.var_count, lower, True, f"c{i}l")
@@ -118,8 +118,7 @@ class BicycleProblem:
             if upper is not None:
                 con = utils.constraint_builder(lambda path: obj_f[i](path), objectives_count, self.var_count, upper, False, f"c{i}u")
                 cons.append(con)
-
-
+        
         # Create the problem
         # This problem object can be passed to various different methods defined in DESDEO
         problem = MOProblem(objectives=objectives, variables=variables, constraints=cons)
