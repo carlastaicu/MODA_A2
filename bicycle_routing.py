@@ -28,7 +28,7 @@ def symmetric_matrix(matrix, integers = False):
     return matrix
 
 def check_constraints(bicycle_problem, path):
-    metrics = ["beauty", "roughness", "safety", "slope"]
+    metrics = ["distance", "beauty", "roughness", "safety", "slope"]
     all_good = np.array([True]*len(path))
     for i, m in enumerate(metrics):
         value = bicycle_problem.total_metric(path, m)
@@ -42,8 +42,8 @@ def check_constraints(bicycle_problem, path):
 # scenic beauty, roughness, safety, slope
 # we want to minimize total distance and maximize comfort 
 # (comfort is given by beauty, roughness, safety, slope)
-obj_weights = np.array([1, 1, 1, 1, 1])
-variable_count = 4 # Around 15 - 25 seems to be good enough
+obj_weights = np.array([1, 1, 0, 0, 0])
+variable_count = 15  # Around 15 - 25 seems to be good enough
 
 # Set constraint for objectives, [lower, upper]
 # If no constraint then set it to None
@@ -138,21 +138,24 @@ plt.savefig("plots/pfront_plot.png", dpi=800)
 def normalize(x):
     return (x - np.min(x)) / (np.max(x) - np.min(x))
 
-data_pareto = pd.DataFrame(obj, columns=["distance"]+list_obj)
-data_pareto_follow_constraints = data_pareto[data_pareto.apply(lambda x: check_constraints(bicycle_problem, [x[1:]]), axis=1)]
+data_pareto = pd.DataFrame(obj, columns=["distance"] + list_obj)
+data_pareto_follow_constraints = data_pareto[check_constraints(bicycle_problem, var)]
 data_pareto_follow_constraints["label"] = "Pareto follow constraints"
-data_pareto_not_follow_constraints = data_pareto[data_pareto.apply(lambda x: not check_constraints(bicycle_problem, [x[1:]]), axis=1)]
+data_pareto_not_follow_constraints = data_pareto[np.invert(check_constraints(bicycle_problem, var))]
 data_pareto_not_follow_constraints["label"] = "Pareto not follow constraints"
-data_random = pd.DataFrame(np.column_stack([random_distances, random_beauty, random_roughness,
-                                                               random_safety, random_slope]),
-                                              columns=["distance"] + list_obj)
-data_random["label"] = "Random"
-data = pd.concat([data_random, data_pareto_not_follow_constraints, data_pareto_follow_constraints])
+data_random = pd.DataFrame(np.column_stack([random_distances, random_beauty, random_roughness, random_safety, random_slope]),
+                           columns=["distance"] + list_obj)
+data_random_follow_constraints = data_random[check_constraints(bicycle_problem, random_samples)]
+data_random_follow_constraints["label"] = "Random follow constraints"
+data_random_not_follow_constraints = data_random[np.invert(check_constraints(bicycle_problem, random_samples))]
+data_random_not_follow_constraints["label"] = "Random not follow constraints"
+data = pd.concat([data_random_follow_constraints, data_random_not_follow_constraints,
+                  data_pareto_not_follow_constraints, data_pareto_follow_constraints])
 data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
 columns_to_check = [i for i, obj_weight in enumerate(obj_weights) if obj_weight != 0]
-interested_data = data.iloc[:, columns_to_check + [-1]]
+interested_data = data.iloc[:, columns_to_check + [-2]]
 
 plt.figure()
-pd.plotting.parallel_coordinates(data, 'label', color=["tomato", "green", "lime"])
+pd.plotting.parallel_coordinates(data, 'label', color=["#F11200", "#8A0101", "#109300", "#5DEC00"])
 plt.savefig("plots/parallel.png", dpi=800)
 plt.show()
