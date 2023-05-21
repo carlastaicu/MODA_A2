@@ -2,44 +2,8 @@ from desdeo_problem.problem.Constraint import ScalarConstraint
 import numpy as np
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
+import pandas as pd
 
-# Util functions
-def form_floor_hull(point_cloud: np.ndarray):
-    lowest_z = np.min(point_cloud[:,2])
-    close_to_lowest_z = lambda z: np.abs(lowest_z - z) < 0.1 # Some small number
-    floor_point_cloud = np.array([[x,y] for x,y,z in point_cloud if close_to_lowest_z(z)]) # 2D points of points which are close to floor level
-    if len(floor_point_cloud) <= 2: # TODO check that forms an area, i.e all points not in same line
-        return None
-    return ConvexHull(floor_point_cloud)
-
-def point_cloud_1d_to_3d(point_cloud_1d: np.ndarray):
-    point_cloud_1d = np.atleast_2d(point_cloud_1d)
-    points_n = int(point_cloud_1d.shape[1]/3)
-    point_cloud_3d = point_cloud_1d.reshape(point_cloud_1d.shape[0], points_n, 3)
-    return point_cloud_3d
-
-def form_hull_1d(point_cloud_1d: np.ndarray):
-    """
-    Form a 3d convex hull from a point cloud
-    where the point cloud is 1 dimensional array
-    such that points at indices k, k+1, k+2 form 
-    a point for all k = 0, 3, 9 ... , len(points)*3 
-    """
-    point_cloud_3d = point_cloud_1d_to_3d(point_cloud_1d)
-    return ConvexHull(point_cloud_3d)
-
-def plot_hull(point_cloud: np.ndarray, hull: ConvexHull):
-    # Plotting the point cloud and the convex hull
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    x,y,z = np.split(point_cloud, 3, 1)
-    ax.scatter3D(x,y,z)
-
-    #Plotting the hull
-    for s in hull.simplices:
-        s = np.append(s, s[0])  # Here we cycle back to the first coordinate
-        ax.plot(point_cloud[s, 0], point_cloud[s, 1], point_cloud[s, 2], "r-")
-    plt.show()
 
 def save(name, objectives, decision, nadir, ideal):
     np.savez(
@@ -81,3 +45,154 @@ def remove_xy_duplicates_w_lowest_z(arr):
         row[2] = np.min(dupl[:,2]) # Set the z value to the lowest of z value of the rows with same x, y values
          
     return t
+
+def check_if_permutation(path):
+    var_count = len(path)
+    if np.sum(path > var_count) != 0:
+        return False
+    if np.sum(path < 1) != 0:
+        return False
+    _, counts = np.unique(path, return_counts=True)
+    if np.sum(counts > 1) != 0:
+        return False
+    return True
+
+def symmetric_matrix(matrix, integers = False):
+    matrix = (matrix + matrix.T) / 2
+    if integers:
+        diff = np.ones_like(matrix) * 0.2
+        probs = np.random.randint(2, size=matrix.shape)
+        # Round up or down with equal probability
+        matrix = (matrix + 0.1 - diff * probs).astype(int)
+    for i in range(len(matrix)):
+        matrix[i][i] = 0
+    return matrix
+
+def check_constraints(path, obj, constraints, mask=[True]*5):
+    metrics = ["distance", "beauty", "roughness", "safety", "slope"]
+    all_good = np.array([True]*len(path))
+    for i, m in enumerate(metrics):
+        if mask[i]:
+            value = obj[:,i]
+            if m == "safety" or m == "slope":
+                value = 6 - value
+            # bicycle_problem.total_metric(path, m, average=(m!="distance"), 
+                                                #  inverse=((m=="safety") or (m=="slope")))
+            if constraints[i][0] is not None:
+                all_good = all_good & (value > constraints[i][0])
+            if constraints[i][1] is not None:
+                all_good = all_good & (value < constraints[i][1])
+    return all_good
+
+def scatter_plot(obj_optimized, obj_random, name):
+    plt.rcParams["figure.autolayout"] = True
+    fig, ax = plt.subplots(2,2, figsize=(6,6))
+    fig.tight_layout(pad=3.0)
+    if "diff" in name:
+        fig.suptitle("Comfort parameters with different weights \n Optimized vs random solutions", fontsize=15, y=0.98)
+    elif "small" in name:
+        fig.suptitle("Smaller problem (nodes=5) \n Optimized vs random solutions", fontsize=15, y=0.98)
+    else:
+        fig.suptitle("All comfort parameters with same weights \n Optimized vs random solutions", fontsize=15, y=0.98)
+    list_obj = ["beauty", "roughness", "safety", "slope"]
+    for i, obj_name in enumerate(list_obj):
+        subplot = ax[i//2][i%2]
+        subplot.scatter(obj_random[:, 0], obj_random[:, i+1], label="Random")
+        subplot.scatter(obj_optimized[:, 0], obj_optimized[:, i+1], label="Pareto")
+        subplot.set_xlabel("Total distance (km)")
+        subplot.set_ylabel(f"Average {obj_name}")
+        handles, labels = subplot.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0))
+    fig.savefig("plots/" + name + ".png", dpi=800, bbox_inches='tight')
+
+def scatter_plot_2obj(objs_optimized, obj_random, name):
+    plt.rcParams["figure.autolayout"] = True
+    fig, ax = plt.subplots(2,2, figsize=(6,6))
+    fig.tight_layout(pad=3.0)
+    fig.suptitle("Optimizing one comfort parameter at a time \n Optimized vs random solutions", fontsize=15, y=0.98)
+    list_obj = ["beauty", "roughness", "safety", "slope"]
+    for i, obj_name in enumerate(list_obj):
+        subplot = ax[i//2][i%2]
+        subplot.scatter(obj_random[:, 0], obj_random[:, i+1], label="Random")
+        subplot.scatter(objs_optimized[i][:, 0], objs_optimized[i][:, i+1], label="Pareto")
+        subplot.set_xlabel("Total distance (km)")
+        subplot.set_ylabel(f"Average {obj_name}")
+        handles, labels = subplot.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper center', bbox_to_anchor=(0.5, 0))
+    fig.savefig("plots/" + name + ".png", dpi=800, bbox_inches='tight')
+
+def normalize(x):
+    return (x - np.min(x)) / (np.max(x) - np.min(x))
+
+def filter_data(var, obj, constraints, mask, list_obj, name, colors):
+    new_colors = []
+    data = pd.DataFrame(obj, columns=["distance"] + list_obj)
+    constraints_mask = check_constraints(var, obj, constraints, mask=mask)
+    data_follow = data[constraints_mask]
+    data_follow["label"] = name + " follow constraints"
+    data_not_follow = data[np.invert(constraints_mask)]
+    data_not_follow["label"] = name + " not follow constraints"
+    if len(data_not_follow) > 0:
+        new_colors.append(colors[1])
+    if len(data_follow) > 0:
+        new_colors.append(colors[0])
+    return data_follow, data_not_follow, new_colors
+    
+
+def parallel_plot(var_optimized, var_random, obj_optimized, obj_random, constraints, obj_weights, name):
+    list_obj = ["beauty", "roughness", "safety", "slope"]
+    data_pareto_follow_constraints, data_pareto_not_follow_constraints, col1 = filter_data(var_optimized, 
+                                                                                          obj_optimized, constraints, obj_weights>0, 
+                                                                                          list_obj, "Pareto", ["#5DEC00", "#109300"])
+    data_random_follow_constraints, data_random_not_follow_constraints, col2 = filter_data(var_random, obj_random, constraints, obj_weights>0, 
+                                                                                            list_obj, "Random",["#F11200", "#8A0101"])
+
+    colors = col2 + col1
+    data = pd.concat([data_random_not_follow_constraints, data_random_follow_constraints,
+                    data_pareto_not_follow_constraints, data_pareto_follow_constraints])
+    data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
+    fig = plt.figure()
+    if "diff" in name:
+        fig.suptitle("Comfort parameters with different weights \n Optimized vs random solutions", fontsize=15, y=0.98)
+    elif "small" in name:
+        fig.suptitle("Smaller problem (nodes=5) \n Optimized vs random solutions", fontsize=15, y=0.98)
+    else:
+        fig.suptitle("All comfort parameters with same weights \n Optimized vs random solutions", fontsize=15, y=0.98)
+    pd.plotting.parallel_coordinates(data, 'label', color=colors)
+    fig.savefig("plots/" + name + ".png", dpi=800, bbox_inches='tight')
+
+def parallel_plot_2obj(vars_optimized, var_random, 
+                       objs_optimized, obj_random, constraints, name):
+    list_obj = ["beauty", "roughness", "safety", "slope"]
+    plt.rcParams["figure.autolayout"] = True
+    fig, ax = plt.subplots(2,2, figsize=(6,6))
+    fig.suptitle("Optimizing one comfort parameter at a time \n Optimized vs random solutions", fontsize=15, y=0.98)
+
+    all_handles = []
+    all_labels = []
+    for i, obj_name in enumerate(list_obj):
+        colors = None
+        subplot = ax[i//2][i%2]
+        mask = np.array([1,0,0,0,0])
+        mask[i+1] = 1
+        data_random_follow_constraints, data_random_not_follow_constraints, col2 = filter_data(var_random, obj_random, constraints, mask, 
+                                                                                            list_obj, "Random", ["#F11200", "#8A0101"])
+        data_pareto_follow_constraints, data_pareto_not_follow_constraints, col1 = filter_data(vars_optimized[i], 
+                                                                                            objs_optimized[i], constraints, mask, 
+                                                                                            list_obj, "Pareto", ["#5DEC00", "#109300"])
+        colors = col2 + col1
+        data = pd.concat([data_random_not_follow_constraints, data_random_follow_constraints,
+                        data_pareto_not_follow_constraints, data_pareto_follow_constraints])
+        data = data.iloc[:,[0,i+1,-1]]
+        data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
+        pd.plotting.parallel_coordinates(data, 'label', color=colors, ax = subplot)
+        handles, labels = subplot.get_legend_handles_labels()
+        for i in range(len(labels)):
+            if labels[i] not in all_labels:
+                all_handles.append(handles[i])
+                all_labels.append(labels[i])
+        subplot.get_legend().remove()
+    fig.tight_layout(pad=3.0)
+    fig.legend(all_handles, all_labels, loc='upper center', bbox_to_anchor=(0.5, 0))
+    fig.savefig("plots/" + name + ".png", dpi=800, bbox_inches='tight')
+    # fig.savefig("plots/" + name + ".png", dpi=800)

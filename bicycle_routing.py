@@ -2,48 +2,19 @@ from desdeo_mcdm.utilities.solvers import solve_pareto_front_representation
 from desdeo_emo.EAs import NSGAIII
 import numpy as np
 import warnings
-import matplotlib.pyplot as plt
 import pandas as pd
+from utils import check_constraints, check_if_permutation, symmetric_matrix
 
 warnings.filterwarnings("ignore")
 from problem import BicycleProblem
-
-def check_if_permutation(path):
-    var_count = len(path)
-    if np.sum(path > var_count) != 0:
-        return False
-    if np.sum(path < 1) != 0:
-        return False
-    _, counts = np.unique(path, return_counts=True)
-    if np.sum(counts > 1) != 0:
-        return False
-    return True
-
-def symmetric_matrix(matrix, integers = False):
-    matrix = (matrix + matrix.T) / 2
-    if integers:
-        matrix = matrix.astype(int)
-    for i in range(len(matrix)):
-        matrix[i][i] = 0
-    return matrix
-
-def check_constraints(bicycle_problem, path):
-    metrics = ["distance", "beauty", "roughness", "safety", "slope"]
-    all_good = np.array([True]*len(path))
-    for i, m in enumerate(metrics):
-        value = bicycle_problem.total_metric(path, m)
-        if constraints[i][0] is not None:
-            all_good = all_good & (value < constraints[i][0])
-        if constraints[i][1] is not None:
-            all_good = all_good & (value > constraints[i][1])
-    return all_good
 
 # Which objectives do we wish to optimize
 # scenic beauty, roughness, safety, slope
 # we want to minimize total distance and maximize comfort 
 # (comfort is given by beauty, roughness, safety, slope)
-obj_weights = np.array([1, 1, 0, 0, 0])
-variable_count = 15  # Around 15 - 25 seems to be good enough
+obj_weights = np.array([1, 1, 1, 1, 1])
+variable_count = 3  # Around 15 - 25 seems to be good enough
+nodes_num = 2
 
 # Set constraint for objectives, [lower, upper]
 # If no constraint then set it to None
@@ -51,16 +22,17 @@ variable_count = 15  # Around 15 - 25 seems to be good enough
 # Notice that breaking constraints will result in a penalty and therefore we might get results that break the constraints
 constraints = np.array([
     [None, None],
-    [3*variable_count, None], # Scenic beauty > 3 
-    [3*variable_count, None], # roughness > 3
-    [None, 2*variable_count], # Safety < 2
-    [None, 3*variable_count], # Slope < 3 
+    [3.0, None], # Scenic beauty > 2 
+    [3.0, None], # roughness > 2
+    [2.0, None], # Inv Safety > 2
+    [3.0, None], # Inv Slope > 2 
 ])
 
 # How many 3d points should the hull be formed of
 # more points => More complex problem : longer execution times
 # Less points => More likely to fail in constructing the hull
 pop_size = 100
+pfront = False
 
 # To create the problem we can call the gd_create method with the parameters defined earlier
 # the pfront argument should be set to True if using the solve_pareto_front_representation method as it doesn't 
@@ -72,9 +44,24 @@ beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1,
 roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
 safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
 slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+# distance_matrix = np.array([[0, 4.1, 3.9, 2.5],
+#                             [4.1, 0, 1.4, 4.8],
+#                             [3.9, 1.4, 0, 2.7],
+#                             [2.5, 4.8, 2.7, 0]])
+# beauty_matrix = np.array([[0, 2, 1, 3],
+#                           [2, 0, 5, 2],
+#                           [1, 5, 0, 4],
+#                           [3, 2, 4, 0]])
+# roughness_matrix = beauty_matrix.copy()
+# safety_matrix = beauty_matrix.copy()
+# slope_matrix = beauty_matrix.copy()
 
-bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix)
-population, method = bicycle_problem.create_problem(obj_weights, pfront = True)
+# goal_nodes = np.random.choice(variable_count, size=nodes_num, replace=False)
+goal_nodes = np.array([1,2])
+
+bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix, goal_nodes=goal_nodes)
+
+population, method = bicycle_problem.create_problem(obj_weights, pfront = pfront, sum_comfort = False)
 
 # Two methods to solve the problem are shown below. Do not use them both at the same time!
 # Use one, and comment out the other!
@@ -102,7 +89,15 @@ evolver = NSGAIII(problem=None,
 while evolver.continue_evolution():
     evolver.iterate()
 
+
 var, obj, _ = evolver.end()
+m = "safety"
+bicycle_problem.total_metric(var,  "safety", average=False,inverse=True)
+
+if pfront:
+    obj[:, 1:] = -obj[:, 1:]
+obj[:, -2:] = (6 - obj[:, -2:]) * obj_weights[-2:]
+
 
 print("var: ", var)
 print("obj: ", obj)
@@ -110,52 +105,8 @@ print("min dist: ", min(obj[:,0]))
 for path in var:
     if not check_if_permutation(path):
         print("solution is not a permutation")
-check_constraints(bicycle_problem, var)
-
-# Generate plots
-# Scatterplot F1, F2
-NUM_RANDOM_SAMPLES = 100
-bicycle_problem = BicycleProblem(variable_count, NUM_RANDOM_SAMPLES, distance_matrix, beauty_matrix, roughness_matrix,safety_matrix, slope_matrix)
-random_samples = np.array([np.random.permutation(range(1, variable_count+1)) for _ in range(NUM_RANDOM_SAMPLES)])
-random_distances = bicycle_problem.total_distance(random_samples)
-random_beauty = bicycle_problem.total_beauty(random_samples)
-random_roughness = bicycle_problem.total_roughness(random_samples)
-random_safety = bicycle_problem.total_safety(random_samples)
-random_slope = bicycle_problem.total_slope(random_samples)
+check_constraints(bicycle_problem, var, constraints, mask=obj_weights>0)
 
 
-plt.figure(figsize=(6, 6))
-list_obj = ["beauty", "roughness", "safety", "slope"]
-for i, obj_name in enumerate(list_obj, start=1):
-    plt.subplot(2, 2, i)
-    plt.scatter(random_distances, locals()["random_"+obj_name])
-    plt.scatter(obj[:, 0], obj[:, i])
-    plt.xlabel("Total distance")
-    plt.ylabel(f"Total {obj_name}")
-plt.savefig("plots/pfront_plot.png", dpi=800)
 
-# import plotly.express as px
-def normalize(x):
-    return (x - np.min(x)) / (np.max(x) - np.min(x))
 
-data_pareto = pd.DataFrame(obj, columns=["distance"] + list_obj)
-data_pareto_follow_constraints = data_pareto[check_constraints(bicycle_problem, var)]
-data_pareto_follow_constraints["label"] = "Pareto follow constraints"
-data_pareto_not_follow_constraints = data_pareto[np.invert(check_constraints(bicycle_problem, var))]
-data_pareto_not_follow_constraints["label"] = "Pareto not follow constraints"
-data_random = pd.DataFrame(np.column_stack([random_distances, random_beauty, random_roughness, random_safety, random_slope]),
-                           columns=["distance"] + list_obj)
-data_random_follow_constraints = data_random[check_constraints(bicycle_problem, random_samples)]
-data_random_follow_constraints["label"] = "Random follow constraints"
-data_random_not_follow_constraints = data_random[np.invert(check_constraints(bicycle_problem, random_samples))]
-data_random_not_follow_constraints["label"] = "Random not follow constraints"
-data = pd.concat([data_random_follow_constraints, data_random_not_follow_constraints,
-                  data_pareto_not_follow_constraints, data_pareto_follow_constraints])
-data.iloc[:, :-1] = data.iloc[:, :-1].apply(normalize)
-columns_to_check = [i for i, obj_weight in enumerate(obj_weights) if obj_weight != 0]
-interested_data = data.iloc[:, columns_to_check + [-2]]
-
-plt.figure()
-pd.plotting.parallel_coordinates(data, 'label', color=["#F11200", "#8A0101", "#109300", "#5DEC00"])
-plt.savefig("plots/parallel.png", dpi=800)
-plt.show()
