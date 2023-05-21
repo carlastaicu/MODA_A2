@@ -44,6 +44,7 @@ def check_constraints(bicycle_problem, path):
 # (comfort is given by beauty, roughness, safety, slope)
 obj_weights = np.array([1, 1, 0, 0, 0])
 variable_count = 15  # Around 15 - 25 seems to be good enough
+dataset_path = './dataset/'
 
 # Set constraint for objectives, [lower, upper]
 # If no constraint then set it to None
@@ -66,12 +67,23 @@ pop_size = 100
 # the pfront argument should be set to True if using the solve_pareto_front_representation method as it doesn't 
 # take account minimizing/maximizing. For everything else we can set it to False
 # The method returns a MOProblem and a scalarmethod instance which can be passed to different Desdeo objects
-distance_matrix = symmetric_matrix(np.random.uniform(0, 50, size=(variable_count+1, variable_count+1)))
+# distance_matrix = symmetric_matrix(np.random.uniform(0, 50, size=(variable_count+1, variable_count+1)))
 
-beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
-roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
-safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
-slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+# beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+# roughness_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+# safety_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+# slope_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
+
+df = pd.read_csv(dataset_path+'distance_matrix.csv', sep=',', header=None)
+distance_matrix = df.to_numpy()
+df = pd.read_csv(dataset_path+'beauty_matrix.csv', sep=',', header=None)
+beauty_matrix = df.to_numpy()
+df = pd.read_csv(dataset_path+'roughness_matrix.csv', sep=',', header=None)
+roughness_matrix = df.to_numpy()
+df = pd.read_csv(dataset_path+'safety_matrix.csv', sep=',', header=None)
+safety_matrix = df.to_numpy()
+df = pd.read_csv(dataset_path+'safety_matrix.csv', sep=',', header=None)
+slope_matrix = df.to_numpy()
 
 bicycle_problem = BicycleProblem(variable_count, pop_size, distance_matrix, beauty_matrix, roughness_matrix, safety_matrix, slope_matrix)
 population, method = bicycle_problem.create_problem(obj_weights, pfront = True)
