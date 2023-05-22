@@ -24,8 +24,6 @@ def create_random_samples(bicycle_problem, variable_count, obj_weights=np.ones(5
     return var_random, obj_random
 
 def plot_nominal_config(constraints, variable_count, nodes_num, pfront):
-
-    # obj_weights = np.ones(5, dtype=int)
     obj_weights = np.array([1,50,50,50,50])
 
     problem, population = create_bicycle_problem(constraints.copy(), obj_weights, variable_count, nodes_num)
@@ -38,7 +36,7 @@ def plot_different_weights(constraints, variable_count, nodes_num, pfront):
     obj_weights = np.array([1,100,1,100,1])
 
     problem, population = create_bicycle_problem(constraints.copy(), obj_weights, variable_count, nodes_num)
-    var_optimized, obj_optimized = optimize_problem(problem, population, pfront, obj_weights)
+    var_optimized, obj_optimized = optimize_problem(population, pfront, obj_weights)
     var_random, obj_random = create_random_samples(problem, variable_count, obj_weights)
     scatter_plot(obj_optimized, obj_random, "diff_weights_scatter")
     parallel_plot(var_optimized, var_random, obj_optimized, obj_random, constraints, obj_weights, "diff_weights_parallel")
@@ -48,14 +46,13 @@ def plot_2obj(constraints, variable_count, nodes_num, pfront):
     obj_weights = np.ones(5)
     problem, population = create_bicycle_problem(constraints.copy(), obj_weights, variable_count, nodes_num)
     var_random, obj_random = create_random_samples(problem, variable_count, obj_weights)
-    # obj_weights = np.ones(5, dtype=int)
     vars_optimized = []
     objs_optimized = []
     for i in range(1, 5):
         obj_weights = np.array([1,0,0,0,0])
         obj_weights[i] = 1
         problem, population = create_bicycle_problem(constraints.copy(), obj_weights, variable_count, nodes_num)
-        var_optimized, obj_optimized = optimize_problem(problem, population, pfront, obj_weights)
+        var_optimized, obj_optimized = optimize_problem(population, pfront, obj_weights)
         vars_optimized.append(var_optimized)
         objs_optimized.append(obj_optimized)
     parallel_plot_2obj(vars_optimized, var_random, objs_optimized, obj_random, constraints, "1v1_parallel")
@@ -66,7 +63,7 @@ def plot_sizes(constraints, variable_count, pfront):
     obj_weights = np.array([1,50,50,50,50])
 
     problem, population = create_bicycle_problem(constraints.copy(), obj_weights, variable_count, nodes_num)
-    var_optimized, obj_optimized = optimize_problem(problem, population, pfront, obj_weights)
+    var_optimized, obj_optimized = optimize_problem(population, pfront, obj_weights)
     var_random, obj_random = create_random_samples(problem, variable_count, obj_weights)
     scatter_plot(obj_optimized, obj_random, "small_scatter")
     parallel_plot(var_optimized, var_random, obj_optimized, obj_random, constraints, obj_weights, "small_parallel")

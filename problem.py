@@ -29,6 +29,7 @@ class BicycleProblem:
     # Defining the objective functions
 
     def total_metric(self, path, metric, inverse=False, average=True):
+        # Keep track of which interest nodes have not been visited yet
         goal_nodes_copy = self.create_goal_nodes_array(len(path))
         matrix_str = metric + "_matrix"
         matrix = getattr(self, matrix_str)
@@ -39,12 +40,14 @@ class BicycleProblem:
             goal_nodes_copy[np.arange(len(path)), path[:, i]-1] = 0
             mask = np.zeros(path.shape[0], dtype=matrix.dtype)
             mask[np.where(np.sum(goal_nodes_copy, axis=1))] = 1
+            # The route is finished once all interest nodes are visited
             length += mask
             if np.sum(mask) == 0:
                 break
             if not inverse:
                 total += matrix[path[:, i],path[:, i+1]] * mask
             else:
+                # Invert the comfort value to maximize all of them
                 total += (6-matrix[path[:, i],path[:, i+1]]) * mask
         if average:
             total = total / length
@@ -170,8 +173,7 @@ class BicycleProblem:
             use_scipy=True
         )
 
-        # Calculate ideal and nadir points
-        #ideal, nadir = payoff_table_method(problem, solver_method=scipy_de_method)
+        # Ideal and nadir points
         ideal = np.array([0, 5, 5, 5, 5])[range(len(obj_weights))]
         nadir = np.array([np.inf, 1, 1, 1, 1])[range(len(obj_weights))]
 

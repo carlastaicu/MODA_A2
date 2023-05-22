@@ -9,14 +9,14 @@ warnings.filterwarnings("ignore")
 from problem import BicycleProblem
 
 def create_bicycle_problem(constraints, obj_weights=np.ones(5), variable_count: int = 20, 
-                           nodes_num: int = 10, pfront: bool = True, pop_size=100, retrieve_from_dataset=True):
+                           nodes_num: int = 10, pfront: bool = True, pop_size=100, retrieve_from_dataset=False):
     if retrieve_from_dataset:
         dataset_path = './dataset/'
         distance_matrix = pd.read_csv(dataset_path+'distance_matrix.csv', sep=',', header=None).to_numpy()
         beauty_matrix = pd.read_csv(dataset_path+'beauty_matrix.csv', sep=',', header=None).to_numpy()
         roughness_matrix = pd.read_csv(dataset_path+'roughness_matrix.csv', sep=',', header=None).to_numpy()
         safety_matrix = pd.read_csv(dataset_path+'safety_matrix.csv', sep=',', header=None).to_numpy()
-        slope_matrix = pd.read_csv(dataset_path+'safety_matrix.csv', sep=',', header=None).to_numpy()
+        slope_matrix = pd.read_csv(dataset_path+'slope_matrix.csv', sep=',', header=None).to_numpy()
     else:
         distance_matrix = symmetric_matrix(np.random.uniform(0, 5, size=(variable_count+1, variable_count+1)))
         beauty_matrix = symmetric_matrix(np.random.randint(1, 5, size=(variable_count+1, variable_count+1)), integers=True)
@@ -34,7 +34,7 @@ def create_bicycle_problem(constraints, obj_weights=np.ones(5), variable_count: 
 def optimize_problem(population, pfront = True, obj_weights=np.ones(5)):
     evolver = NSGAIII(problem=None,
                     initial_population=population,
-                    n_iterations=1,
+                    n_iterations=200,
                     n_gen_per_iter=100,
                     population_size=100)
 

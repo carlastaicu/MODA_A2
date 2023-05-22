@@ -48,14 +48,3 @@ class Crossover:
                     pop_copy[shuffled_ids[i]][xover_points[k]] = tmp
                     k += 1
         return pop_copy
-
-
-# class SurrogatePopulation(Population, BasePopulation):
-#     def __init__(
-#         self, problem, pop_size: int, initial_pop, xover, mutation, recombination
-#     ):
-#         BasePopulation.__init__(self, problem, pop_size)
-#         self.add(initial_pop)
-#         self.xover = xover
-#         self.mutation = mutation
-#         self.recombination = recombination

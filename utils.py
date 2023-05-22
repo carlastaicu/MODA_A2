@@ -76,8 +76,6 @@ def check_constraints(path, obj, constraints, mask=[True]*5):
             value = obj[:,i]
             if m == "safety" or m == "slope":
                 value = 6 - value
-            # bicycle_problem.total_metric(path, m, average=(m!="distance"), 
-                                                #  inverse=((m=="safety") or (m=="slope")))
             if constraints[i][0] is not None:
                 all_good = all_good & (value > constraints[i][0])
             if constraints[i][1] is not None:
@@ -195,4 +193,3 @@ def parallel_plot_2obj(vars_optimized, var_random,
     fig.tight_layout(pad=3.0)
     fig.legend(all_handles, all_labels, loc='upper center', bbox_to_anchor=(0.5, 0))
     fig.savefig("plots/" + name + ".png", dpi=800, bbox_inches='tight')
-    # fig.savefig("plots/" + name + ".png", dpi=800)
